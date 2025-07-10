@@ -1,0 +1,22 @@
+{
+	"geode": "4.6.3",
+	"gd": {
+		"win": "2.2074"
+	},
+	"id": "emkuai.level-load",
+	"name": "Level Load",
+	"version": "v1.0.0",
+	"developer": "emkuai",
+	"description": "Optimizes some slow level setup code.",
+	"tags": [
+		"performance"
+	],
+	"issues": {
+		"info": "If you encounter any issues, please report them to the Issues page on GitHub!",
+		"url": "https://github.com/EmeraldBlock/level-load/issues"
+	},
+	"links": {
+		"community": "https://discord.gg/Aj4jtUMUaF",
+		"source": "https://github.com/EmeraldBlock/level-load"
+	}
+}
