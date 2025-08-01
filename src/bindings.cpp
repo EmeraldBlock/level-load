@@ -32,4 +32,13 @@ auto GJBaseGameLayer::moveObjectToStaticGroup(GameObject* p0) -> decltype(moveOb
 	return reinterpret_cast<FunctionType>(func)(this, p0);
 }
 
+auto GameObject::getColorKey(bool p0, bool p1) -> decltype(getColorKey(p0, p1)) {
+	using FunctionType = decltype(getColorKey(p0, p1))(*)(GameObject*, bool, bool);
+	static auto func = wrapFunction(base::get() + 0x199db0, tulip::hook::WrapperMetadata{
+		.m_convention = geode::hook::createConvention(tulip::hook::TulipConvention::Thiscall),
+		.m_abstract = tulip::hook::AbstractFunction::from(FunctionType(nullptr)),
+	});
+	return reinterpret_cast<FunctionType>(func)(this, p0, p1);
+}
+
 #endif

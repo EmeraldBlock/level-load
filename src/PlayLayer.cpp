@@ -16,7 +16,7 @@ class PropsComputer {
 		gd::vector<void*> games;
 		PropsCache cache;
 	};
-	std::jthread computeThread;
+	std::thread computeThread; // poor support for `std::jthread` :(
 	GJBaseGameLayer* gameLayer;
 	bool done;
 	std::array<Job, 2> jobs{};
@@ -65,7 +65,7 @@ public:
 		}
 		jq = 0;
 		jf = 0;
-		computeThread = std::jthread{&PropsComputer::process, this};
+		computeThread = std::thread{&PropsComputer::process, this};
 	}
 
 	// user's responsibility to not over-call
@@ -86,6 +86,7 @@ public:
 	void finish() {
 		done = true;
 		jobs[jq].ready = true;
+		computeThread.join();
 		computeThread = {};
 		for (auto& job : jobs) {
 			job.strs.clear();

@@ -63,10 +63,10 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	auto filename = ObjectToolbox::sharedState()->m_allKeys[key];
 	auto x = GET_FLOAT(2);
 	float y = GET_DOUBLE(3) + 90.;
-	if (_isnan(x) != 0) {
+	if (isnan(x) != 0) {
 		x = 0.f;
 	}
-	if (_isnan(y) != 0) {
+	if (isnan(y) != 0) {
 		y = 0.f;
 	}
 	auto flipX = GET_BOOL(4);
@@ -95,7 +95,7 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	obj->loadGroupsFromString(GET_STRING(57));
 	obj->m_hasGroupParent = GET_BOOL(34);
 	obj->m_hasAreaParent = GET_BOOL(279);
-	game->loadGroupParentsFromString(obj, GET_STRING(274));
+	static_cast<BasedGameLayer*>(game)->_loadGroupParentsFromString(obj, GET_STRING(274));
 	auto scaleX = GET_FLOAT(128);
 	auto scaleY = GET_FLOAT(129);
 	if (scaleX != 0.f) {

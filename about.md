@@ -1,6 +1,6 @@
 # Level Load
 
-A few optimizations to speed up loading a level.
+A few optimizations to speed up loading a level. <cy>Mac and Windows only because of a single missing binding :(</cy>
 
 - Objects are created by first parsing a line of the level string as key-value pairs, then translating those pairs to properties of the object. Now, the parsing is done in a separate thread. **This provides a decent speedup to most levels, though it can vary.**
 

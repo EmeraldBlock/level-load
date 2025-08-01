@@ -6,10 +6,9 @@ using namespace geode::prelude;
 
 #define CHECK(expr) if (!expr) { log::warn("Failed: " #expr); }
 
-#ifdef GEODE_IS_WINDOWS
-
 #include <Geode/modify/GJBaseGameLayer.hpp>
 class $modify(BasedGameLayer, GJBaseGameLayer) {
+#ifdef GEODE_IS_WINDOWS
 	// to be honest it's probably already over if for some reason some other mod wanted to modify these methods
 	// but hey, this probably won't make it worse
 	static void onModify(auto& self) {
@@ -23,7 +22,24 @@ class $modify(BasedGameLayer, GJBaseGameLayer) {
 	struct Fields {
 		std::map<int, std::set<GameObject*>> m_toMoveToStaticGroup;
 	};
+#endif
+
+	// `TodoReturn` prevents just providing bindings/impl
+	// could bind for Windows but whatever
+	void _loadGroupParentsFromString(GameObject* obj, gd::string str) {
+		// so much is inlined
+		if (str.empty()) return;
+		size_t i = 0;
+		while (true) {
+			auto j = str.find('.', i);
+			setGroupParent(obj, atoi(str.substr(i, j - i).c_str()));
+			if (j == std::string::npos) return;
+			i = j + 1;
+		}
+	}
 };
+
+#ifdef GEODE_IS_WINDOWS
 
 $execute {
 	Mod::get()->hook(
