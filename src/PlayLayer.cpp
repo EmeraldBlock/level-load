@@ -1,0 +1,185 @@
+#include "main.hpp"
+#include "PropsCache.hpp"
+#include <Geode/Geode.hpp>
+
+using namespace geode::prelude;
+
+namespace {
+
+class PropsComputer {
+	struct Job {
+		std::atomic<bool> ready;
+		// input
+		gd::string const* objStr;
+		// output
+		gd::vector<gd::string> strs;
+		gd::vector<void*> games;
+		PropsCache cache;
+	};
+	std::jthread computeThread;
+	GJBaseGameLayer* gameLayer;
+	bool done;
+	std::array<Job, 2> jobs{};
+	int jq;
+	int jf;
+
+public:
+	void process() {
+		for (int j = 0;; j = 1 - j) {
+			auto& job = jobs[j];
+			while (!job.ready) ;
+			if (done) break;
+			auto str = *job.objStr;
+			// this is a lot different than the decompilation, hope it's the same
+			std::ranges::fill(job.games, nullptr);
+			job.cache = {};
+			auto begin = str.data();
+			auto end = begin + str.size();
+			for (auto it = begin; it != end; ++it) {
+				if (*it == ',') *it = '\0';
+			}
+			auto it = begin;
+			while (true) {
+				auto pos = atoi(it);
+				while (*it != '\0') ++it;
+				if (it == end) break;
+				++it;
+				job.strs[pos] = it;
+				job.games[pos] = gameLayer;
+				job.cache.cacheProp(pos, it);
+				while (*it != '\0') ++it;
+				if (it == end) break;
+				++it;
+			}
+			job.ready = false;
+		}
+	}
+
+	void start(GJBaseGameLayer* layer) {
+		gameLayer = layer;
+		done = false;
+		for (auto& job : jobs) {
+			job.ready = false;
+			job.strs.resize(600);
+			job.games.resize(600);
+		}
+		jq = 0;
+		jf = 0;
+		computeThread = std::jthread{&PropsComputer::process, this};
+	}
+
+	// user's responsibility to not over-call
+	void queue(gd::string const& str) {
+		jobs[jq].objStr = &str;
+		jobs[jq].ready = true;
+		jq = 1 - jq;
+	}
+
+	// user's responsibility to not over-call
+	Job& fetch() {
+		while (jobs[jf].ready) ;
+		auto& job = jobs[jf];
+		jf = 1 - jf;
+		return job;
+	}
+
+	void finish() {
+		done = true;
+		jobs[jq].ready = true;
+		computeThread = {};
+		for (auto& job : jobs) {
+			job.strs.clear();
+			job.games.clear();
+		}
+	}
+};
+
+PropsComputer pc; // global, whatever
+
+}
+
+void PlayedLayer::prepareCreateObjectsFromSetup(gd::string& p0) $override {
+	PlayLayer::prepareCreateObjectsFromSetup(p0);
+	pc.start(this);
+}
+
+// should be the same as original, besides the usage of `PropsCache` and `PropsComputer`
+void PlayedLayer::processCreateObjectsFromSetup() {
+	auto n = m_objectStrings.size();
+	auto kilos = n / 1000; // this took a bit to reverse
+	auto frac = std::min(100.f, std::roundf(kilos) + 10.f);
+	int numToCreate = std::ceil(n / frac);
+
+	auto inRange = [&](int i) {
+		// ull and int comparison, can't merge in some cases (said cases raise bigger questions though)
+		return i < n && i < m_objectsCreated + numToCreate;
+	};
+
+	// this should never be false (except empty levels maybe), but what if it is!
+	if (inRange(m_objectsCreated)) {
+
+		pc.queue(m_objectStrings[m_objectsCreated]);
+
+		for (auto i = m_objectsCreated; inRange(i); ++i) {
+
+			if (inRange(i + 1)) {
+				pc.queue(m_objectStrings[i + 1]);
+			}
+
+			auto& job = pc.fetch();
+
+			auto obj = GamedObject::newObjectFromVector(job.strs, job.games, this, m_level->m_lowDetailModeToggled, job.cache);
+			if (!obj) continue;
+
+			if (obj->m_objectID == 31) {
+				static_cast<StartPosObject*>(obj)->loadSettingsFromString(*job.objStr);
+			} else if (obj->m_objectID == 2065) {
+				auto part = static_cast<ParticleGameObject*>(obj);
+				if (part->m_updatedParticleData) {
+					part->m_updatedParticleData = false;
+					GameToolbox::particleStringToStruct(part->m_particleData, part->m_particleStruct);
+				}
+			}
+			if (obj->getType() == GameObjectType::SecretCoin && m_level->m_levelType != GJLevelType::Local) continue;
+			if (obj->m_mainColorKeyIndex < 1) {
+				for (int i = 0; i < (!!obj->m_colorSprite) + 1; ++i) {
+					auto key = obj->getColorKey(i == 0, false);
+					auto color = static_cast<CCInteger*>(m_colorKeyDict->objectForKey(key));
+					int value;
+					if (color) {
+						value = color->m_nValue;
+					} else {
+						value = m_nextColorKey;
+						m_colorKeyDict->setObject(CCInteger::create(m_nextColorKey), key);
+						++m_nextColorKey;
+					}
+					(i == 0 ? obj->m_mainColorKeyIndex : obj->m_detailColorKeyIndex) = value;
+				}
+			} else {
+				m_nextColorKey = std::max({
+					m_nextColorKey,
+					obj->m_mainColorKeyIndex,
+					obj->m_detailColorKeyIndex,
+				});
+			}
+			if (obj->getType() == GameObjectType::UserCoin) {
+				if (m_coinArray->count() < 3) {
+					m_coinArray->addObject(obj);
+					addObject(obj);
+				}
+			} else {
+				addObject(obj);
+			}
+		}
+	}
+
+	m_objectsCreated += numToCreate;
+	m_loadingProgress = std::min(1.f, (m_objectsCreated - 1.f) / m_objectStrings.size());
+	if (m_objectsCreated < m_objectStrings.size()) {
+		return;
+	}
+	pc.finish();
+	createObjectsFromSetupFinished();
+	m_loadingProgress = 1.f;
+	setupHasCompleted();
+}

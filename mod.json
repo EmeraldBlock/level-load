@@ -1,13 +1,16 @@
 {
-	"geode": "4.6.3",
+	"geode": "4.7.0",
 	"gd": {
-		"win": "2.2074"
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
 	},
 	"id": "emkuai.level-load",
 	"name": "Level Load",
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"developer": "emkuai",
-	"description": "Optimizes some slow level setup code.",
+	"description": "Speeds up level loading.",
 	"tags": [
 		"performance"
 	],
