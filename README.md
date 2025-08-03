@@ -1,5 +1,5 @@
 # Level Load
 
-I don't 100% trust my decompilation. At least I left notes!
+Reimplementations were checked against Windows and Android 64-bit decompilations, as well as <https://flowvix.github.io/gd-info-explorer/>.
 
 See [about.md](./about.md).

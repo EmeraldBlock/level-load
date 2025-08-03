@@ -12,8 +12,8 @@ class PropsComputer {
 		// input
 		gd::string const* objStr;
 		// output
-		gd::vector<gd::string> strs;
-		gd::vector<void*> games;
+		gd::vector<gd::string> strs{}; // needed because of an explicit constructor error on Android
+		gd::vector<void*> games{}; // ditto
 		PropsCache cache;
 	};
 	std::thread computeThread; // poor support for `std::jthread` :(
@@ -44,9 +44,11 @@ public:
 				while (*it != '\0') ++it;
 				if (it == end) break;
 				++it;
-				job.strs[pos] = it;
-				job.games[pos] = gameLayer;
-				job.cache.cacheProp(pos, it);
+				if (0 < pos && pos < 600) {
+					job.strs[pos] = it;
+					job.games[pos] = gameLayer;
+					job.cache.cacheProp(pos, it);
+				}
 				while (*it != '\0') ++it;
 				if (it == end) break;
 				++it;
@@ -135,15 +137,12 @@ void PlayedLayer::processCreateObjectsFromSetup() {
 			if (obj->m_objectID == 31) {
 				static_cast<StartPosObject*>(obj)->loadSettingsFromString(*job.objStr);
 			} else if (obj->m_objectID == 2065) {
-				auto part = static_cast<ParticleGameObject*>(obj);
-				if (part->m_updatedParticleData) {
-					part->m_updatedParticleData = false;
-					GameToolbox::particleStringToStruct(part->m_particleData, part->m_particleStruct);
-				}
+				static_cast<ParticleGameObject*>(obj)->updateParticleStruct();
 			}
 			if (obj->getType() == GameObjectType::SecretCoin && m_level->m_levelType != GJLevelType::Local) continue;
 			if (obj->m_mainColorKeyIndex < 1) {
-				for (int i = 0; i < (!!obj->m_colorSprite) + 1; ++i) {
+				auto colors = 1 + obj->hasSecondaryColor();
+				for (int i = 0; i < colors; ++i) {
 					auto key = obj->getColorKey(i == 0, false);
 					auto color = static_cast<CCInteger*>(m_colorKeyDict->objectForKey(key));
 					int value;
@@ -151,7 +150,7 @@ void PlayedLayer::processCreateObjectsFromSetup() {
 						value = color->m_nValue;
 					} else {
 						value = m_nextColorKey;
-						m_colorKeyDict->setObject(CCInteger::create(m_nextColorKey), key);
+						m_colorKeyDict->setObject(CCInteger::create(value), key);
 						++m_nextColorKey;
 					}
 					(i == 0 ? obj->m_mainColorKeyIndex : obj->m_detailColorKeyIndex) = value;

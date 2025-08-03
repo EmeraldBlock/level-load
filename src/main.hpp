@@ -8,51 +8,20 @@ using namespace geode::prelude;
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 class $modify(BasedGameLayer, GJBaseGameLayer) {
-#ifdef GEODE_IS_WINDOWS
 	// to be honest it's probably already over if for some reason some other mod wanted to modify these methods
 	// but hey, this probably won't make it worse
 	static void onModify(auto& self) {
-		// CHECK(self.setHookPriorityPre("GJBaseGameLayer::moveObjectToStaticGroup", Priority::Last))
+		CHECK(self.setHookPriorityPre("GJBaseGameLayer::moveObjectToStaticGroup", Priority::Last))
 		CHECK(self.setHookPriorityPost("GJBaseGameLayer::optimizeMoveGroups", Priority::First))
 	}
 
-	void _moveObjectToStaticGroup(GameObject* obj); // override
+	void moveObjectToStaticGroup(GameObject* obj) $override;
 	void optimizeMoveGroups() $override;
 
 	struct Fields {
 		std::map<int, std::set<GameObject*>> m_toMoveToStaticGroup;
 	};
-#endif
-
-	// `TodoReturn` prevents just providing bindings/impl
-	// could bind for Windows but whatever
-	void _loadGroupParentsFromString(GameObject* obj, gd::string str) {
-		// so much is inlined
-		if (str.empty()) return;
-		size_t i = 0;
-		while (true) {
-			auto j = str.find('.', i);
-			setGroupParent(obj, atoi(str.substr(i, j - i).c_str()));
-			if (j == std::string::npos) return;
-			i = j + 1;
-		}
-	}
 };
-
-#ifdef GEODE_IS_WINDOWS
-
-$execute {
-	Mod::get()->hook(
-		reinterpret_cast<void*>(geode::base::get() + 0x22c060),
-		+[](BasedGameLayer* self, GameObject* obj) {
-			return self->_moveObjectToStaticGroup(obj);
-		},
-		"GJBaseGameLayer::moveObjectToStaticGroup",
-		tulip::hook::TulipConvention::Thiscall
-	).unwrap()->setPriority(Priority::Last);
-}
-
-#endif
 
 #include <Geode/modify/LevelInfoLayer.hpp>
 class $modify(LeveledInfoLayer, LevelInfoLayer) {
@@ -83,12 +52,6 @@ class $modify(PlayedLayer, PlayLayer) {
 
 #undef CHECK
 
-// a guess
-inline bool GameObject::canRotateFree() {
-	auto type = m_objectType;
-	return (
-		type != GameObjectType::Solid
-		&& type != GameObjectType::Breakable
-		&& type != GameObjectType::Slope
-	) || m_isNoTouch;
+inline bool GameObject::hasSecondaryColor() {
+	return m_colorSprite;
 }

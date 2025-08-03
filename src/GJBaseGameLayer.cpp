@@ -9,7 +9,7 @@ using namespace geode::prelude;
  * In place of `m_toMoveToStaticGroup`, normally adds to static group (unless already contained)
  * and removes (with release) from optimized group, creating the arrays for said groups if they don't exist.
  */
-void BasedGameLayer::_moveObjectToStaticGroup(GameObject* obj) {
+void BasedGameLayer::moveObjectToStaticGroup(GameObject* obj) {
 	if (!obj->m_isDecoration2) return;
 	obj->m_isDecoration2 = false;
 	for (int i = 0; i < obj->m_groupCount; ++i) {
@@ -23,6 +23,7 @@ void BasedGameLayer::optimizeMoveGroups() {
 
 	for (auto& [gid, objs] : m_fields->m_toMoveToStaticGroup) {
 
+		// getStaticGroup
 		auto& usGroup = m_staticGroups[gid];
 		if (!usGroup) {
 			usGroup = CCArray::create();
@@ -30,6 +31,7 @@ void BasedGameLayer::optimizeMoveGroups() {
 		}
 		auto sGroup = CCArrayExt<GameObject*>{usGroup};
 
+		// getOptimizedGroup
 		auto& uoGroup = m_optimizedGroups[gid];
 		if (!uoGroup) {
 			uoGroup = CCArray::create();

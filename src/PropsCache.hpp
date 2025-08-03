@@ -30,7 +30,7 @@ CAST(gd::string, str)
 	M(int, 26) \
 	M(int, 33) \
 	M(int, 108) \
-	M(int, 121) \
+	M(bool, 121) \
 	M(int, 343) \
 	M(short, 446) \
 	M(gd::string, 57) \
@@ -64,7 +64,7 @@ CAST(gd::string, str)
 	M(short, 20) \
 	M(short, 61) \
 	M(bool, 96) \
-	M(double, 6) \
+	M(float, 6) \
 	M(float, 131) \
 	M(float, 132) \
 	M(bool, 41) \

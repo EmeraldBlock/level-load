@@ -12,12 +12,13 @@ using namespace geode::prelude;
 // #define GET_FLOAT(i) static_cast<float>(GET_DOUBLE(i))
 // #define GET_STRING(i) (games[i] ? strs[i] : gd::string{})
 
-#define GET_INT(i) cache.m_##i
-#define GET_BOOL(i) cache.m_##i
-#define GET_SHORT(i) cache.m_##i
-#define GET_DOUBLE(i) cache.m_##i
-#define GET_FLOAT(i) cache.m_##i
-#define GET_STRING(i) cache.m_##i
+#define GET_TYPE(t, i) ([] { static_assert(std::is_same_v<t, decltype(cache.m_##i)>); }, cache.m_##i)
+#define GET_INT(i) GET_TYPE(int, i)
+#define GET_BOOL(i) GET_TYPE(bool, i)
+#define GET_SHORT(i) GET_TYPE(short, i)
+#define GET_DOUBLE(i) GET_TYPE(double, i)
+#define GET_FLOAT(i) GET_TYPE(float, i)
+#define GET_STRING(i) GET_TYPE(gd::string, i)
 
 // should be the same as original when using "original behavior"
 GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::vector<void*>& games, GJBaseGameLayer* game, bool ldm, PropsCache const& cache) {
@@ -25,19 +26,18 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	if (ldm && isHighDetail) {
 		return nullptr;
 	}
-	// auto key = GET_INT(1);
-	auto key = (games[1] ? atoi(strs[1].c_str()) : 0);
-	int key_related = -1;
+	auto key = GET_INT(1);
+	int key_orig = -1;
 	switch (key) {
 		case 104:
-			key_related = key;
+			key_orig = key;
 			key = 915;
 			break;
 		case 221:
 		case 717:
 		case 718:
 		case 743:
-			key_related = key;
+			key_orig = key;
 			key = 899;
 			break;
 		case 675:
@@ -60,42 +60,42 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	}
 	auto obj = createWithKey(key);
 	if (!obj) return nullptr;
-	auto filename = ObjectToolbox::sharedState()->m_allKeys[key];
+	gd::string filename = ObjectToolbox::sharedState()->intKeyToFrame(key);
+	// android caseworks 2,3 and weaves a bunch of the branching
 	auto x = GET_FLOAT(2);
 	float y = GET_DOUBLE(3) + 90.;
-	if (isnan(x) != 0) {
-		x = 0.f;
-	}
-	if (isnan(y) != 0) {
-		y = 0.f;
-	}
+	if (isnan(x) != 0) x = 0.f;
+	if (isnan(y) != 0) y = 0.f;
 	auto flipX = GET_BOOL(4);
 	auto flipY = GET_BOOL(5);
-	auto rotation_d = GET_DOUBLE(6);
-	float rotation = rotation_d;
+	auto rotation = GET_FLOAT(6);
 	auto editorLayer = GET_SHORT(20);
 	auto editorLayer2 = GET_SHORT(61);
 	obj->m_objectID = key;
 	if (key == 9 || key == 1715) {
 		obj->m_defaultZOrder = 2;
 	}
-	auto zLayer = static_cast<ZLayer>(GET_INT(24));
-	if (!obj->m_zFixedZLayer) {
-		obj->m_zLayer = zLayer;
-	}
+	obj->setCustomZLayer(GET_INT(24));
+	// android swaps the below two
 	obj->m_zOrder = GET_INT(25);
 	obj->m_isHighDetail = isHighDetail;
 	obj->addToGroup(GET_INT(26));
 	obj->addToGroup(GET_INT(33));
 	obj->m_linkedGroup = GET_INT(108);
 	obj->m_isNoTouch = GET_BOOL(121);
-	// original has a bunch of redundant checks
+	// windows has a bunch of redundant checks
 	obj->m_enterChannel = std::clamp(GET_INT(343), 0, 100);
 	obj->m_objectMaterial = GET_SHORT(446);
 	obj->loadGroupsFromString(GET_STRING(57));
 	obj->m_hasGroupParent = GET_BOOL(34);
 	obj->m_hasAreaParent = GET_BOOL(279);
-	static_cast<BasedGameLayer*>(game)->_loadGroupParentsFromString(obj, GET_STRING(274));
+	auto parents = GET_STRING(274);
+	// android swaps the two conditions
+	if (parents.size() != 0 && game) {
+		game->loadGroupParentsFromString(obj, parents);
+	} else {
+		obj->m_hasGroupParentsString = false;
+	}
 	auto scaleX = GET_FLOAT(128);
 	auto scaleY = GET_FLOAT(129);
 	if (scaleX != 0.f) {
@@ -140,12 +140,14 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	obj->setFlipX(flipX);
 	obj->setFlipY(flipY);
 	obj->m_startFlipX = flipX;
+	// android swaps the below two
 	obj->m_startFlipY = flipY;
 	obj->m_editorLayer = editorLayer;
 	obj->m_editorLayer2 = editorLayer2;
 	obj->m_hasNoGlow = GET_BOOL(96);
-	auto rotation_i = static_cast<int>(rotation_d);
-	if (!obj->canRotateFree() && rotation_i != rotation_i / 90 * 90) {
+	// inlined on windows, eliminating the redundant check
+	// the windows decomp simplifies the double->float->int conversion to double->int for some reason
+	if (!obj->canRotateFree() && static_cast<int>(rotation) % 90 != 0 && !obj->m_isNoTouch) {
 		rotation = 0.f;
 	}
 	obj->setRotation(rotation);
@@ -164,8 +166,8 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	}
 	obj->setStartPos({x, y});
 	obj->getObjectTextureRect();
-	if (key_related != -1) {
-		switch (key_related) {
+	if (key_orig != -1) {
+		switch (key_orig) {
 			case 104:
 				static_cast<EffectGameObject*>(obj)->m_usesBlending = true;
 				break;
@@ -176,17 +178,19 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 		}
 	}
 	if (GET_BOOL(41)) {
-		// inlined (second arg is unused)
-		auto hsv = GameToolbox::hsvFromString(GET_STRING(43), nullptr);
+		// windows: inlined, and note second arg is unused because it's baked in)
+		auto hsv = GameToolbox::hsvFromString(GET_STRING(43), "a");
 		if (hsv != ccHSVValue{0.f, 1.f, 1.f, false, false}) {
+			// android swaps the below two
 			obj->m_baseColor->m_usesHSV = true;
 			obj->m_baseColor->m_hsv = hsv;
 		}
 	}
 	if (GET_BOOL(42) && obj->m_detailColor) {
-		// not inlined! (second arg is unused)
-		auto hsv = GameToolbox::hsvFromString(GET_STRING(44), nullptr);
+		// not inlined! and ditto
+		auto hsv = GameToolbox::hsvFromString(GET_STRING(44), "a");
 		if (hsv != ccHSVValue{0.f, 1.f, 1.f, false, false}) {
+			// ditto
 			obj->m_detailColor->m_usesHSV = true;
 			obj->m_detailColor->m_hsv = hsv;
 		}
@@ -194,6 +198,7 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	auto oldColorID = GET_INT(19);
 	if (oldColorID != 0) {
 		int colorID;
+		// assigned from a lookup table on android
 		switch (oldColorID) {
 			case 1: colorID = 1005; break;
 			case 2: colorID = 1006; break;
@@ -205,14 +210,11 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 			case 8: colorID = 1003; break;
 			default: goto out;
 		}
-		if (obj->m_detailColor) {
-			obj->m_detailColor->m_colorID = colorID;
-		} else {
-			obj->m_baseColor->m_colorID = colorID;
-		}
+		// android redundantly takes the max with 0
+		(obj->m_detailColor ? obj->m_detailColor : obj->m_baseColor)->m_colorID = colorID;
 	} else {
 		// the !games[i] case is optimized for.
-		// there's some weird unreachable code that assigns 1011, IDK what that's about
+		// on windows, there's some weird unreachable code that assigns 1011, IDK what that's about
 		auto baseColorID = std::clamp(GET_INT(21), 0, 1101);
 		if (baseColorID != 0) {
 			obj->m_baseColor->m_colorID = baseColorID;
@@ -225,13 +227,11 @@ GameObject* GamedObject::newObjectFromVector(gd::vector<gd::string>& strs, gd::v
 	}
 	out:;
 	obj->saveActiveColors();
-	obj->m_fScaleX = 0.f;
-	obj->m_fScaleY = 0.f;
-	obj->setRScaleX(1.f);
-	obj->setRScaleY(1.f);
+	obj->resetRScaleForced();
 	return obj;
 }
 
+#undef GET_TYPE
 #undef GET_INT
 #undef GET_BOOL
 #undef GET_SHORT
