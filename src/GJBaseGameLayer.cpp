@@ -3,8 +3,6 @@
 
 using namespace geode::prelude;
 
-#ifdef GEODE_IS_WINDOWS
-
 /**
  * In place of `m_toMoveToStaticGroup`, normally adds to static group (unless already contained)
  * and removes (with release) from optimized group, creating the arrays for said groups if they don't exist.
@@ -58,5 +56,3 @@ void BasedGameLayer::optimizeMoveGroups() {
 	}
 	m_fields->m_toMoveToStaticGroup.clear();
 }
-
-#endif

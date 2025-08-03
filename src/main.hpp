@@ -1,5 +1,6 @@
 #pragma once
 
+#include "inline.hpp"
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;
@@ -51,7 +52,3 @@ class $modify(PlayedLayer, PlayLayer) {
 };
 
 #undef CHECK
-
-inline bool GameObject::hasSecondaryColor() {
-	return m_colorSprite;
-}
