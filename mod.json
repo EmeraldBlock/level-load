@@ -8,7 +8,7 @@
 	},
 	"id": "emkuai.level-load",
 	"name": "Level Load",
-	"version": "v1.1.0",
+	"version": "v1.1.1",
 	"developer": "emkuai",
 	"description": "Speeds up level loading.",
 	"tags": [
