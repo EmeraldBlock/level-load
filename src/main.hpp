@@ -43,11 +43,9 @@ class $modify(GamedObject, GameObject) {
 #include <Geode/modify/PlayLayer.hpp>
 class $modify(PlayedLayer, PlayLayer) {
 	static void onModify(auto& self) {
-		CHECK(self.setHookPriorityPost("PlayLayer::prepareCreateObjectsFromSetup", Priority::Last))
 		CHECK(self.setHookPriorityPre("PlayLayer::processCreateObjectsFromSetup", Priority::Last))
 	}
 
-	void prepareCreateObjectsFromSetup(gd::string& p0) $override;
 	void processCreateObjectsFromSetup() $override;
 };
 

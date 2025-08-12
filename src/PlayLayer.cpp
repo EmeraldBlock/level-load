@@ -18,7 +18,7 @@ class PropsComputer {
 	};
 	std::thread computeThread; // poor support for `std::jthread` :(
 	GJBaseGameLayer* gameLayer;
-	bool done;
+	bool active{false};
 	std::array<Job, 2> jobs{};
 	int jq;
 	int jf;
@@ -28,7 +28,7 @@ public:
 		for (int j = 0;; j = 1 - j) {
 			auto& job = jobs[j];
 			while (!job.ready) ;
-			if (done) break;
+			if (!active) break;
 			auto str = *job.objStr;
 			// this is a lot different than the decompilation, hope it's the same
 			std::ranges::fill(job.games, nullptr);
@@ -59,7 +59,7 @@ public:
 
 	void start(GJBaseGameLayer* layer) {
 		gameLayer = layer;
-		done = false;
+		active = true;
 		for (auto& job : jobs) {
 			job.ready = false;
 			job.strs.resize(600);
@@ -86,7 +86,7 @@ public:
 	}
 
 	void finish() {
-		done = true;
+		active = false;
 		jobs[jq].ready = true;
 		computeThread.join();
 		computeThread = {};
@@ -95,15 +95,21 @@ public:
 			job.games.clear();
 		}
 	}
+
+	// user's responsibility to deal with unfetched jobs
+	void tryStart(GJBaseGameLayer* layer) {
+		if (active) return;
+		start(layer);
+	}
+
+	void tryFinish() {
+		if (!active) return;
+		finish();
+	}
 };
 
 PropsComputer pc; // global, whatever
 
-}
-
-void PlayedLayer::prepareCreateObjectsFromSetup(gd::string& p0) $override {
-	PlayLayer::prepareCreateObjectsFromSetup(p0);
-	pc.start(this);
 }
 
 // should be the same as original, besides the usage of `PropsCache` and `PropsComputer`
@@ -121,6 +127,7 @@ void PlayedLayer::processCreateObjectsFromSetup() {
 	// this should never be false (except empty levels maybe), but what if it is!
 	if (inRange(m_objectsCreated)) {
 
+		pc.tryStart(this);
 		pc.queue(m_objectStrings[m_objectsCreated]);
 
 		for (auto i = m_objectsCreated; inRange(i); ++i) {
@@ -178,7 +185,7 @@ void PlayedLayer::processCreateObjectsFromSetup() {
 	if (m_objectsCreated < m_objectStrings.size()) {
 		return;
 	}
-	pc.finish();
+	pc.tryFinish();
 	createObjectsFromSetupFinished();
 	m_loadingProgress = 1.f;
 	setupHasCompleted();
