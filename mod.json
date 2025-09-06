@@ -1,5 +1,5 @@
 {
-	"geode": "4.7.0",
+	"geode": "4.8.0",
 	"gd": {
 		"win": "2.2074",
 		"android": "2.2074",
@@ -8,7 +8,7 @@
 	},
 	"id": "emkuai.level-load",
 	"name": "Level Load",
-	"version": "v1.1.2",
+	"version": "v1.1.3",
 	"developer": "emkuai",
 	"description": "Speeds up level loading.",
 	"tags": [

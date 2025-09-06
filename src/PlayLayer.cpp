@@ -45,6 +45,12 @@ public:
 				if (it == end) break;
 				++it;
 				if (0 < pos && pos < 600) {
+					#ifdef GEODE_IS_ANDROID
+					// otherwise the old string's refcount gets decremented twice due to a Geode bug, I think.
+					// this seems to only manifest with the assignment of `m_particleData` in `ParticleGameObject::customObjectSetup`,
+					// because the copy-on-write policy causes the string to be shared, and it isn't immediately processed
+					job.strs[pos].clear();
+					#endif
 					job.strs[pos] = it;
 					job.games[pos] = gameLayer;
 					job.cache.cacheProp(pos, it);
@@ -146,7 +152,7 @@ void PlayedLayer::processCreateObjectsFromSetup() {
 			} else if (obj->m_objectID == 2065) {
 				static_cast<ParticleGameObject*>(obj)->updateParticleStruct();
 			}
-			if (obj->getType() == GameObjectType::SecretCoin && m_level->m_levelType != GJLevelType::Local) continue;
+			if (obj->getType() == GameObjectType::SecretCoin && m_level->m_levelType != GJLevelType::Main) continue;
 			if (obj->m_mainColorKeyIndex < 1) {
 				auto colors = 1 + obj->hasSecondaryColor();
 				for (int i = 0; i < colors; ++i) {

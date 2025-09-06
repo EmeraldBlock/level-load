@@ -1,3 +1,7 @@
+## 1.1.3
+- Fix an Android crash affecting levels containing ParticleGameObject
+- Update to Geode v4.8.0
+
 ## 1.1.2
 - Compatibility: prevent crash if processCreateObjectsFromSetup is called extraneously
 
