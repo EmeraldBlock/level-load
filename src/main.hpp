@@ -50,3 +50,13 @@ class $modify(PlayedLayer, PlayLayer) {
 };
 
 #undef CHECK
+
+#include <Geode/modify/CCSpritePlus.hpp>
+class $modify(CCSpritePlus) {
+	void destructor() {
+		if (typeinfo_cast<ParticleGameObject*>(this)) {
+			log::debug("p destroy");
+		}
+		CCSpritePlus::~CCSpritePlus();
+	}
+};

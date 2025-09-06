@@ -1,3 +1,6 @@
+## 1.1.3
+- WHY
+
 ## 1.1.2
 - Compatibility: prevent crash if processCreateObjectsFromSetup is called extraneously
 
